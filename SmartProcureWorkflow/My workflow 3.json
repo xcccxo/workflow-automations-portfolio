@@ -1,0 +1,1444 @@
+{
+  "name": "My workflow 3",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1VKd1OX4uyqXBX7FdyS-FQIjWlnXILpN212VaSIqHywg",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1VKd1OX4uyqXBX7FdyS-FQIjWlnXILpN212VaSIqHywg/edit?resourcekey=&gid=308623391#gid=308623391",
+          "mode": "url"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        80,
+        -592
+      ],
+      "id": "c5ae8e10-bc8e-4ca0-befd-2a2898b07971",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "C2q2BideDuorbwkh",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres un Analista de Compras Inteligente. Tu trabajo es comparar el \"Producto Seleccionado\" por un empleado en un formulario contra su \"Descripción/Justificación\", e inferir si realmente necesita eso o si se equivocó, basándote estrictamente en este catálogo:\n\nCATÁLOGO AUTORIZADO DE PRODUCTOS:\n- Hojas Blancas Tamaño Carta (Caja 10 resmas)\n- Bolígrafos Tinta Negra (Caja 50 pzas)\n- Cartucho de Tóner Negro Genérico\n- Servicio de Limpieza Mensual Corporativo\n- Mantenimiento Preventivo de Servidores\n- Silla de Oficina Ergonómica\n- Escritorio de Madera y Metal (Loft Style)\n- Monitor 24 pulgadas FHD\n- Teclado y Mouse Inalámbrico\n- Disco Duro Externo 2TB\n- Licencia Anual Software ERP\n- Servicio de Consultoría IT (Hora)\n- Carpeta de Argollas Tamaño Carta\n- Café Tostado en Grano 1kg\n- Garrafón de Agua 20L\n\nDATOS DE ENTRADA (Solicitud actual):\nSolicitante: {{ $('Google Sheets Trigger').item.json['Nombre completo'] }}\nCantidad: {{ $('Google Sheets Trigger').item.json['Cantidad requerida'] }}\nProducto Seleccionado: {{ $('Google Sheets Trigger').item.json['Producto requerido'] }}\nDescripción del usuario: \"{{ $('Google Sheets Trigger').item.json['Detalles adicionales'] }}\"\n\nREGLAS DE DEDUCCIÓN:\n1. Si el \"Producto Seleccionado\" concuerda lógicamente con la \"Descripción del usuario\", la ruta es \"Directo\" y la advertencia queda vacía.\n2. Si la descripción describe un producto diferente al seleccionado (Ej. Eligió Monitor pero describe dolor de espalda), debes inferir el producto correcto del catálogo. La ruta es \"Aclaracion\".\n3. Si la descripción es demasiado burda o vaga para justificar un producto costoso, la ruta es \"Aclaracion\".\n\nFORMATO DE SALIDA (Devuelve ÚNICAMENTE este JSON válido, sin formato markdown, sin comillas invertidas):\n{\n  \"ruta\": \"Aclaracion\" | \"Directo\",\n  \"producto_sugerido\": \"Nombre exacto del producto inferido del catálogo seguido del texto ' (sugerencia en base a su descripción)'. Ejemplo: Monitor 24 pulgadas FHD (sugerencia en base a su descripción).\",\n  \"resumen_texto\": \"[Nombre], [Cantidad], [Producto Inferido del Catálogo]\",\n  \"advertencia\": \"En base a su descripción se concluyó que necesita [Producto Inferido]. Se recomienda aclarar antes de aceptar esta solicitud. O si se equivocó: El solicitante eligió [Producto Seleccionado] pero no cuadra con su descripción, se asumió que se refería a [Producto Inferido], favor de aclarar. (Si la ruta es Directo, deja esto vacío)\"\n}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        752,
+        -720
+      ],
+      "id": "444706dc-7276-47bd-b13b-0825ec008c76",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        832,
+        -496
+      ],
+      "id": "7c6273f0-2e1c-4b74-b034-2a43322ea8d3",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "XQNeX6YXxKoNV8kO",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1552,
+        -416
+      ],
+      "id": "3a20f054-4a54-46e6-bbc2-85edfac5d1ed",
+      "name": "Wait",
+      "webhookId": "9b5b8f99-3dd3-4cad-9e05-a5e95dff9763"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b5319fd8-f458-4705-b4f9-43720942cc9e",
+              "leftValue": "={{ $json.query.respuesta }}",
+              "rightValue": "aprobado",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1776,
+        -416
+      ],
+      "id": "2e0b18bb-c928-41f8-9309-302951d068bd",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.documentId }}",
+          "mode": "id"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "application/pdf",
+              "drawingsToFormat": "application/pdf",
+              "slidesToFormat": "application/pdf",
+              "sheetsToFormat": "application/pdf"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3344,
+        -768
+      ],
+      "id": "b0b86419-b582-48f8-a7b0-b2aae793a191",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "vCjYV2TuMu70aoID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "mail@mail.com",
+        "subject": "=Nueva Orden de Compra Generada - {{ $('Get row(s) in Historial').item.json['Número Orden'] }}",
+        "message": "=<div style=\"font-family: Arial, sans-serif; color: #333333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;\">          <!-- Encabezado -->     <div style=\"background-color: #2c3e50; padding: 20px; text-align: center;\">         <h2 style=\"color: #ffffff; margin: 0;\">Nueva Orden de Compra</h2>     </div>          <!-- Cuerpo del Correo -->     <div style=\"padding: 25px;\">         <p style=\"font-size: 16px;\">Hola, equipo de Operaciones:</p>         <p style=\"font-size: 14px; line-height: 1.6;\">El sistema ha generado y aprobado automáticamente una nueva orden de compra. Adjunto a este correo encontrarán el documento oficial en formato PDF.</p>                  <!-- Tabla de Resumen -->         <div style=\"background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;\">             <table style=\"width: 100%; border-collapse: collapse; font-size: 14px;\">                 <tr>                     <td style=\"padding: 8px 0; border-bottom: 1px solid #e0e0e0;\"><strong>No. de Orden:</strong></td>                     <td style=\"padding: 8px 0; border-bottom: 1px solid #e0e0e0; color: #2980b9;\"><strong>{{ $('Get row(s) in Historial').item.json['Número Orden'] }}</strong></td>                 </tr>                 <tr>                     <td style=\"padding: 8px 0; border-bottom: 1px solid #e0e0e0;\"><strong>Proveedor:</strong></td>                     <td style=\"padding: 8px 0; border-bottom: 1px solid #e0e0e0;\">{{ $('Get row(s) in Proveedores').item.json['Nombre/Razón Social'] }}</td>                 </tr>                 <tr>                     <td style=\"padding: 8px 0; border-bottom: 1px solid #e0e0e0;\"><strong>Solicitante:</strong></td>                     <td style=\"padding: 8px 0; border-bottom: 1px solid #e0e0e0;\">{{ $('Get row(s) in Historial').item.json['Solicitante'] }}</td>                 </tr>                 <tr>                     <td style=\"padding: 8px 0; border-bottom: 1px solid #e0e0e0;\"><strong>Fecha de Registro:</strong></td>                     <td style=\"padding: 8px 0; border-bottom: 1px solid #e0e0e0;\">{{ $('Get row(s) in Historial').item.json['Fecha'] }}</td>                 </tr>             </table>         </div>          <p style=\"font-size: 14px; line-height: 1.6;\">Por favor, revisen el documento adjunto para proceder con el envío al proveedor o su archivo contable.</p>         <br>         <p style=\"font-size: 14px; margin: 0;\">Saludos cordiales,</p>         <p style=\"font-size: 14px; font-weight: bold; margin-top: 5px; color: #2c3e50;\">Sistema de Automatización n8n</p>     </div>          <!-- Pie de página -->     <div style=\"background-color: #eeeeee; padding: 15px; text-align: center; font-size: 11px; color: #7f8c8d;\">         Este es un mensaje generado automáticamente. El archivo PDF <strong>(data)</strong> ha sido encriptado y adjuntado por el sistema.     </div> </div>",
+        "options": {
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {}
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        3568,
+        -768
+      ],
+      "id": "9e010565-9fa0-4b4b-9b80-a8a5196b074b",
+      "name": "Send a message1",
+      "webhookId": "182df2b6-b221-4784-8579-e1b88decf1a9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LKNCQpJd8BVfcgIo",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d099636d-e2e9-4356-af02-9bfa7b70dae5",
+              "leftValue": "={{ $json['Detalles adicionales'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        528,
+        -592
+      ],
+      "id": "b81052b0-ef5b-49dd-b3d9-fbb2f322156f",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "9451327f-b0b7-4311-a1da-7304039f6e7f",
+              "leftValue": "={{ DateTime.fromFormat($json[\"Marca temporal\"], \"d/M/yyyy HH:mm:ss\") }}",
+              "rightValue": "={{ $now.minus({days: 2}) }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            },
+            {
+              "id": "4c7a0aa8-ab8c-425e-a8a5-b7d35178203e",
+              "leftValue": "={{ $json[\"Estado automatico\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        304,
+        -592
+      ],
+      "id": "cd08426b-c3ba-4593-966e-3a17d6a3cf1e",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WuhXbffXjGqcLefo-0va5rxxxCKziEYNscvDXS6zLKI",
+          "mode": "list",
+          "cachedResultName": "Datos_Ordenes_Compra_EJ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WuhXbffXjGqcLefo-0va5rxxxCKziEYNscvDXS6zLKI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 205372486,
+          "mode": "list",
+          "cachedResultName": "Productos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WuhXbffXjGqcLefo-0va5rxxxCKziEYNscvDXS6zLKI/edit#gid=205372486"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Descripción",
+              "lookupValue": "={{ $json['Producto Final'] || $('Google Sheets Trigger').first().json['Producto requerido'] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2224,
+        -768
+      ],
+      "id": "e1eaf8e6-e15e-40fc-9c51-fc11fc9d50ad",
+      "name": "Get row(s) Productos",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "guUZ2AclieprW6VS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WuhXbffXjGqcLefo-0va5rxxxCKziEYNscvDXS6zLKI",
+          "mode": "list",
+          "cachedResultName": "Datos_Ordenes_Compra_EJ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WuhXbffXjGqcLefo-0va5rxxxCKziEYNscvDXS6zLKI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 152336724,
+          "mode": "list",
+          "cachedResultName": "Proveedores",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WuhXbffXjGqcLefo-0va5rxxxCKziEYNscvDXS6zLKI/edit#gid=152336724"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Código Proveedor",
+              "lookupValue": "={{ $json['Proveedor Sugerido'] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2448,
+        -768
+      ],
+      "id": "1a6699d0-d353-4f1a-9fa6-0882e8c765eb",
+      "name": "Get row(s) in Proveedores",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "guUZ2AclieprW6VS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1WuhXbffXjGqcLefo-0va5rxxxCKziEYNscvDXS6zLKI",
+          "mode": "list",
+          "cachedResultName": "Datos_Ordenes_Compra_EJ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WuhXbffXjGqcLefo-0va5rxxxCKziEYNscvDXS6zLKI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 756743015,
+          "mode": "list",
+          "cachedResultName": "Historial",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WuhXbffXjGqcLefo-0va5rxxxCKziEYNscvDXS6zLKI/edit#gid=756743015"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ $now.toFormat('dd/MM/yyyy') }}",
+            "Solicitante": "={{ $('Google Sheets Trigger').item.json['Nombre completo'] }}",
+            "Código Proveedor": "={{ $json['Código Proveedor'] }}",
+            "Número Orden": "=OC-{{ $now.toFormat('yyyyMMdd-HHmm') }}",
+            "Código Producto": "={{ $('Get row(s) Productos').item.json['Código Producto'] }}",
+            "Cantidad": "={{ $('Google Sheets Trigger').item.json['Cantidad requerida'] }}",
+            "Precio Unitario": "=${{ $('Get row(s) Productos').item.json['Precio Unitario'] }} {{ $('Get row(s) Productos').item.json.Moneda }}",
+            "Total Línea": "={{ $('Google Sheets Trigger').item.json['Cantidad requerida'] * $('Get row(s) Productos').item.json['Precio Unitario'] }}",
+            "Estado Orden": "Aprobada",
+            "Centro de Costos": "Operaciones",
+            "Aprobador": "Gerencia de Operaciones",
+            "Comentarios": "={{ $('Google Sheets Trigger').item.json['Detalles adicionales'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Número Orden",
+              "displayName": "Número Orden",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Código Proveedor",
+              "displayName": "Código Proveedor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Código Producto",
+              "displayName": "Código Producto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Cantidad",
+              "displayName": "Cantidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Precio Unitario",
+              "displayName": "Precio Unitario",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total Línea",
+              "displayName": "Total Línea",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Estado Orden",
+              "displayName": "Estado Orden",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Centro de Costos",
+              "displayName": "Centro de Costos",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Solicitante",
+              "displayName": "Solicitante",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Aprobador",
+              "displayName": "Aprobador",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Comentarios",
+              "displayName": "Comentarios",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2672,
+        -768
+      ],
+      "id": "7d119b7c-4772-4a87-8e6f-83bfa5a25378",
+      "name": "Get row(s) in Historial",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "guUZ2AclieprW6VS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "mail@mail.com",
+        "subject": "Solicitud de compra!",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; color: #333;\">\n  <h2 style=\"color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;\">Nueva Solicitud de Compra</h2>\n  <p>Hola,</p>\n  <p>Se ha registrado una nueva solicitud de compra en el sistema que requiere autorización. A continuación los detalles:</p>\n\n  <table style=\"width: 100%; border-collapse: collapse; margin-top: 20px; margin-bottom: 20px;\">\n    <tr>\n      <td style=\"padding: 10px; border: 1px solid #ddd; font-weight: bold; width: 35%; background-color: #f9f9f9;\">Solicitante:</td>\n      <td style=\"padding: 10px; border: 1px solid #ddd;\">{{ $json[\"Nombre completo\"] }}</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 10px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9;\">Producto:</td>\n      <td style=\"padding: 10px; border: 1px solid #ddd;\">{{ $json[\"Producto requerido\"] }}</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 10px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9;\">Cantidad:</td>\n      <td style=\"padding: 10px; border: 1px solid #ddd;\">{{ $json[\"Cantidad requerida\"] }}</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 10px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9;\">Fecha esperada:</td>\n      <td style=\"padding: 10px; border: 1px solid #ddd;\">{{ $json[\"Fecha preferida de entrega\"] }}</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 10px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9;\">Especificaciones:</td>\n      <td style=\"padding: 10px; border: 1px solid #ddd;\">{{ $json[\"Detalles adicionales\"] }}</td>\n    </tr>\n  </table>\n\n  <p style=\"margin-bottom: 20px;\">Por favor, evalúa la solicitud y haz clic en uno de los siguientes enlaces para continuar con el flujo:</p>\n\n  <div style=\"text-align: center; margin-top: 30px; margin-bottom: 20px;\">\n    <!-- Botón de Aprobado -->\n    <a href=\"{{ $execution.resumeUrl }}&respuesta=aprobado\" style=\"background-color: #27ae60; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 4px; margin-right: 15px; display: inline-block;\">✅ Aprobar Solicitud</a>\n    \n    <!-- Botón de Rechazado -->\n    <a href=\"{{ $execution.resumeUrl }}&respuesta=rechazado\" style=\"background-color: #e74c3c; color: white; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 4px; display: inline-block;\">❌ Rechazar</a>\n  </div>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1328,
+        -416
+      ],
+      "id": "ae4246b1-135c-44ee-a91c-0856ba11f16c",
+      "name": "Send a SolicitudCompra",
+      "webhookId": "4e21750c-8df3-4ec3-8a58-0d86760bd808",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LKNCQpJd8BVfcgIo",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "mail@mail.com",
+        "subject": "Solicitud rechazada",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; color: #333;\">\n  \n  <div style=\"text-align: center; margin-bottom: 20px;\">\n    <h2 style=\"color: #e74c3c; margin-bottom: 5px;\">Solicitud de Compra Rechazada</h2>\n    <p style=\"color: #7f8c8d; font-size: 14px; margin-top: 0;\">Notificación automática del sistema de operaciones</p>\n  </div>\n  \n  <p>Hola <strong> {{ $('Google Sheets Trigger').item.json['Nombre completo'] }} </strong>,</p>\n  \n  <p>Te informamos que, tras su evaluación, tu solicitud de compra reciente <strong>no ha sido autorizada</strong> para proceder a la generación de la orden de compra en este momento.</p>\n\n  <div style=\"background-color: #fcf3f2; border-left: 4px solid #e74c3c; padding: 15px; margin-top: 20px; margin-bottom: 20px;\">\n    <h4 style=\"margin-top: 0; color: #c0392b;\">Detalles de la solicitud rechazada:</h4>\n    <ul style=\"margin-bottom: 0; padding-left: 20px;\">\n      <li style=\"margin-bottom: 8px;\"><strong>Producto:</strong>{{ $('Google Sheets Trigger').item.json['Producto requerido'] }} </li>\n      <li style=\"margin-bottom: 8px;\"><strong>Cantidad: </strong>{{ $('Google Sheets Trigger').item.json['Cantidad requerida'] }} </li>\n      <li style=\"margin-bottom: 8px;\"><strong>Especificaciones:</strong> {{ $json[\"Detalles adicionales o especificaciones\"] || $('Google Sheets Trigger').item.json['Detalles adicionales'] }}</li>\n      <li><strong>Fecha de solicitud:</strong> {{ $('Google Sheets Trigger').item.json['Marca temporal'] }} </li>\n    </ul>\n  </div>\n\n  <p>Si consideras que la solicitud es crítica, te sugerimos contactar directamente al área de Operaciones o a tu supervisor inmediato para revisar el presupuesto o ajustar las especificaciones del requerimiento.</p>\n  \n  <hr style=\"border: 0; border-top: 1px solid #eee; margin: 30px 0;\">\n  \n  <p style=\"font-size: 12px; color: #95a5a6; text-align: center;\">\n    Este es un correo generado automáticamente. Por favor, no respondas a esta dirección.<br>\n    Sistema de Gestión de Compras Interno\n  </p>\n  \n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2080,
+        -400
+      ],
+      "id": "a0d80bff-3396-4616-ac23-bf42be2740c5",
+      "name": "Send a Rechazado",
+      "webhookId": "4e21750c-8df3-4ec3-8a58-0d86760bd808",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LKNCQpJd8BVfcgIo",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1VKd1OX4uyqXBX7FdyS-FQIjWlnXILpN212VaSIqHywg",
+          "mode": "list",
+          "cachedResultName": "Copia de Solicitud de Compra (Respuestas)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VKd1OX4uyqXBX7FdyS-FQIjWlnXILpN212VaSIqHywg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 308623391,
+          "mode": "list",
+          "cachedResultName": "Respuestas de formulario 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VKd1OX4uyqXBX7FdyS-FQIjWlnXILpN212VaSIqHywg/edit#gid=308623391"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Estado automatico": "Aceptado",
+            "Marca temporal": "={{ $('Google Sheets Trigger').item.json['Marca temporal'] }}"
+          },
+          "matchingColumns": [
+            "Marca temporal"
+          ],
+          "schema": [
+            {
+              "id": "Marca temporal",
+              "displayName": "Marca temporal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Dirección de correo electrónico",
+              "displayName": "Dirección de correo electrónico",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Nombre completo",
+              "displayName": "Nombre completo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Producto requerido",
+              "displayName": "Producto requerido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Cantidad requerida",
+              "displayName": "Cantidad requerida",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Fecha preferida de entrega",
+              "displayName": "Fecha preferida de entrega",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Detalles adicionales",
+              "displayName": "Detalles adicionales",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Estado automatico",
+              "displayName": "Estado automatico",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3792,
+        -768
+      ],
+      "id": "fbedcf62-318f-45d5-87ba-e4b609bd7986",
+      "name": "Update request state1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "guUZ2AclieprW6VS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Copy file').item.json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "replaceAll",
+              "text": "{{CODIGO_PROVEEDOR}}",
+              "replaceText": "={{ $('Get row(s) in Proveedores').item.json['Código Proveedor'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{NOMBRE_PROVEEDOR}}",
+              "replaceText": "={{ $('Get row(s) in Proveedores').item.json['Nombre/Razón Social'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{RFC_PROVEEDOR}}",
+              "replaceText": "={{ $('Get row(s) in Proveedores').item.json.RFC }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{DIRECCION_PROVEEDOR}}",
+              "replaceText": "={{ $('Get row(s) in Proveedores').item.json.Dirección }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{TELEFONO_PROVEEDOR}}",
+              "replaceText": "={{ $('Get row(s) in Proveedores').item.json.Teléfono }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{CORREO_PROVEEDOR}}",
+              "replaceText": "={{ $('Get row(s) in Proveedores').item.json.Correo }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{NUMERO_ORDEN}}",
+              "replaceText": "={{ $('Get row(s) in Historial').item.json['Número Orden'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{FECHA}}",
+              "replaceText": "={{ $('Get row(s) in Historial').item.json.Fecha }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{CENTRO_COSTOS}}",
+              "replaceText": "={{ $('Get row(s) in Historial').item.json['Centro de Costos'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{SOLICITANTE}}",
+              "replaceText": "={{ $('Get row(s) in Historial').item.json.Solicitante }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{CONDICIONES_PAGO}}",
+              "replaceText": "={{ $('Get row(s) in Proveedores').item.json['Condiciones de Pago'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{CODIGO_PROD}}",
+              "replaceText": "={{ $('Get row(s) in Historial').item.json['Código Producto'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{DESCRIPCION_PROD}}",
+              "replaceText": "={{ $('Get row(s) Productos').item.json.Descripción }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{UNIDAD_PROD}}",
+              "replaceText": "={{ $('Get row(s) Productos').item.json.Unidad }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{CANTIDAD}}",
+              "replaceText": "={{ $('Get row(s) in Historial').item.json.Cantidad.toString() }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{PRECIO_UNIT}}",
+              "replaceText": "=$ {{ $('Get row(s) Productos').item.json['Precio Unitario'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{TOTAL_LINEA}}",
+              "replaceText": "=$ {{ $('Get row(s) in Historial').item.json['Total Línea'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{SUBTOTAL}}",
+              "replaceText": "=$ {{ $('Get row(s) in Historial').item.json['Total Línea'] }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{IVA}}",
+              "replaceText": "=$ {{ $('Get row(s) in Historial').item.json['Total Línea'] * 0.16 }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{TOTAL_ORDEN}}",
+              "replaceText": "=$ {{ $('Get row(s) in Historial').item.json['Total Línea'] * 1.16 }}"
+            },
+            {
+              "action": "replaceAll",
+              "text": "{{FECHA_GENERACION}}",
+              "replaceText": "={{ $now.toFormat('dd/MM/yyyy HH:mm') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        -768
+      ],
+      "id": "54a50cf0-e797-43d0-9669-d80a492363ec",
+      "name": "Update a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "KEbjb4Ia44wkozfZ",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "copy",
+        "fileId": {
+          "__rl": true,
+          "value": "1vI35FYh8jJtEj4_nFJku0t3WOcU4OhYFxYARZoMtqL8",
+          "mode": "list",
+          "cachedResultName": "Plantilla_Orden_Compra_N8N",
+          "cachedResultUrl": "https://docs.google.com/document/d/1vI35FYh8jJtEj4_nFJku0t3WOcU4OhYFxYARZoMtqL8/edit?usp=drivesdk"
+        },
+        "name": "=Orden de Compra - {{ $('Get row(s) in Historial').item.json[\"Número Orden\"] }}.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2896,
+        -768
+      ],
+      "id": "45b6a477-596a-4c43-b1ab-15d33c1df8b0",
+      "name": "Copy file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "vCjYV2TuMu70aoID",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4731231c-b956-44ed-9881-4359e4e29524",
+              "leftValue": "={{ JSON.parse($('Basic LLM Chain').item.json.text).ruta }}",
+              "rightValue": "Aclaracion",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1104,
+        -720
+      ],
+      "id": "f3ac261b-d052-4944-b28b-ff84a4d3cae4",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "sendTo": "mail@mail.com",
+        "subject": "Aclaracion!",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; color: #333;\">\n\n    <h2 style=\"color: #c0392b; border-bottom: 2px solid #e74c3c; padding-bottom: 10px;\">⚠️ Aclaración Requerida para Solicitud de Compra</h2>\n    <p>Hola,</p>\n    <p>La Inteligencia Artificial ha pausado esta solicitud porque el producto seleccionado en el formulario <strong>no coincide</strong> con la justificación escrita por el empleado.</p>\n\n    <div style=\"background-color: #fef5f5; padding: 15px; border-left: 4px solid #c0392b; margin-bottom: 20px; border-radius: 4px;\">\n        <h3 style=\"color: #c0392b; margin-top: 0; font-size: 16px;\">🤖 Alerta del Sistema</h3>\n        <p style=\"margin: 0;\">{{ JSON.parse($('Basic LLM Chain').item.json.text).advertencia }}</p>\n    </div>\n\n    <h3 style=\"color: #2c3e50; margin-top: 30px; font-size: 15px;\">Comparativa de la Solicitud:</h3>\n    <table style=\"width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; font-size: 14px;\">\n        <tr>\n            <td style=\"padding: 10px; border: 1px solid #ddd; font-weight: bold; width: 35%; background-color: #f9f9f9;\">Solicitante:</td>\n            <td style=\"padding: 10px; border: 1px solid #ddd;\">{{ $('Google Sheets Trigger').item.json['Nombre completo'] }}</td>\n        </tr>\n        <tr>\n            <td style=\"padding: 10px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9; color: #7f8c8d;\">Selección Original:</td>\n            <td style=\"padding: 10px; border: 1px solid #ddd; color: #7f8c8d; text-decoration: line-through;\">{{ $('Google Sheets Trigger').item.json['Producto requerido'] }}</td>\n        </tr>\n        <tr>\n            <td style=\"padding: 10px; border: 1px solid #e67e22; font-weight: bold; background-color: #fdf2e9; color: #d35400;\">Sugerencia de IA:</td>\n            <td style=\"padding: 10px; border: 1px solid #e67e22; color: #d35400; font-weight: bold;\">{{ JSON.parse($('Basic LLM Chain').item.json.text).producto_sugerido }}</td>\n        </tr>\n        <tr>\n            <td style=\"padding: 10px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9;\">Cantidad:</td>\n            <td style=\"padding: 10px; border: 1px solid #ddd;\">{{ $('Google Sheets Trigger').item.json['Cantidad requerida'] }}</td>\n        </tr>\n        <tr>\n            <td style=\"padding: 10px; border: 1px solid #ddd; font-weight: bold; background-color: #f9f9f9;\">Justificación:</td>\n            <td style=\"padding: 10px; border: 1px solid #ddd; font-style: italic;\">\"{{ $('Google Sheets Trigger').item.json['Detalles adicionales'] }}\"</td>\n        </tr>\n    </table>\n\n    <p style=\"font-size: 14px;\">Selecciona una de las siguientes acciones para continuar con el flujo:</p>\n    \n   <!-- BOTONES DE DECISIÓN -->\n    <div style=\"text-align: center; margin-top: 25px; margin-bottom: 15px;\">\n        <a href=\"{{ $execution.resumeUrl }}&action=aprobar\" style=\"background-color: #27ae60; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block; margin: 5px; font-size: 13px;\">✅ Aprobar Sugerencia IA</a>\n        \n        <a href=\"{{ $execution.resumeUrl }}&action=aclarar\" style=\"background-color: #f39c12; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block; margin: 5px; font-size: 13px;\">⚠️ Pedir Aclaración</a>\n        \n        <a href=\"{{ $execution.resumeUrl }}&action=rechazar\" style=\"background-color: #c0392b; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block; margin: 5px; font-size: 13px;\">❌ Rechazar Solicitud</a>\n    </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1328,
+        -720
+      ],
+      "id": "b684a2d4-1ed3-459d-b511-1b8ebe727035",
+      "name": "Send a SolicitudCompra1",
+      "webhookId": "4e21750c-8df3-4ec3-8a58-0d86760bd808",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LKNCQpJd8BVfcgIo",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1552,
+        -720
+      ],
+      "id": "68696f7f-9fcc-4fc7-a9e4-374619a46ccf",
+      "name": "Wait1",
+      "webhookId": "9b5b8f99-3dd3-4cad-9e05-a5e95dff9763"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b916b6d2-cd0a-4687-a256-3fba05d9d317",
+              "name": "Producto Final",
+              "value": "={{ JSON.parse($('Basic LLM Chain').item.json.text).producto_sugerido.replace(' (sugerencia en base a su descripción)', '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        2000,
+        -768
+      ],
+      "id": "0a4ed1e1-c856-4d54-8425-66d23e72349c",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.query.action }}",
+                    "rightValue": "aprobar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "84f7f032-13a7-49e5-bcc2-3ba36a6df5eb"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9971ee1a-cc0a-449c-be21-aced494b001b",
+                    "leftValue": "={{ $json.query.action }}",
+                    "rightValue": "aclarar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "386f3630-856b-43fd-a7da-64fa5c2841af",
+                    "leftValue": "={{ $json.query.action }}",
+                    "rightValue": "rechazar",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1776,
+        -736
+      ],
+      "id": "72593713-f1d4-471d-a746-1fe0a9cb2189",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1VKd1OX4uyqXBX7FdyS-FQIjWlnXILpN212VaSIqHywg",
+          "mode": "list",
+          "cachedResultName": "Copia de Solicitud de Compra (Respuestas)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VKd1OX4uyqXBX7FdyS-FQIjWlnXILpN212VaSIqHywg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 308623391,
+          "mode": "list",
+          "cachedResultName": "Respuestas de formulario 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VKd1OX4uyqXBX7FdyS-FQIjWlnXILpN212VaSIqHywg/edit#gid=308623391"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Estado automatico": "Rechazado",
+            "Marca temporal": "={{ $('Google Sheets Trigger').item.json['Marca temporal'] }}"
+          },
+          "matchingColumns": [
+            "Marca temporal"
+          ],
+          "schema": [
+            {
+              "id": "Marca temporal",
+              "displayName": "Marca temporal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Dirección de correo electrónico",
+              "displayName": "Dirección de correo electrónico",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Nombre completo",
+              "displayName": "Nombre completo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Producto requerido",
+              "displayName": "Producto requerido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Cantidad requerida",
+              "displayName": "Cantidad requerida",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Fecha preferida de entrega",
+              "displayName": "Fecha preferida de entrega",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Detalles adicionales",
+              "displayName": "Detalles adicionales",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Estado automatico",
+              "displayName": "Estado automatico",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2304,
+        -400
+      ],
+      "id": "45c422c4-1087-45e9-b2b6-deed4d46a04d",
+      "name": "Update request state2",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "guUZ2AclieprW6VS",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) Productos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a Rechazado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a SolicitudCompra",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) Productos": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in Proveedores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in Proveedores": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in Historial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in Historial": {
+      "main": [
+        [
+          {
+            "node": "Copy file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a SolicitudCompra": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a Rechazado": {
+      "main": [
+        [
+          {
+            "node": "Update request state2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message1": {
+      "main": [
+        [
+          {
+            "node": "Update request state1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a document": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Copy file": {
+      "main": [
+        [
+          {
+            "node": "Update a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Send a SolicitudCompra1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Send a SolicitudCompra1": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [
+          {
+            "node": "Send a Rechazado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) Productos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0e56f190-5ef8-4d2a-bde9-839206e02e51",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cd3c3bdbe27c9643b5dbe72d117b8b966c4f745733a43dd8bc244acca9b651a7"
+  },
+  "nodeGroups": [],
+  "id": "2fpz7TuURW9L3D2I",
+  "tags": []
+}

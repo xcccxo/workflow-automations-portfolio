@@ -1,0 +1,984 @@
+{
+  "name": "Entrada de bienes",
+  "nodes": [
+    {
+      "parameters": {
+        "inputDataFieldName": "foto",
+        "options": {}
+      },
+      "type": "n8n-nodes-tesseractjs.tesseractNode",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -208
+      ],
+      "id": "f026298f-2d82-4fdf-bb27-d53e5cdcee67",
+      "name": "Tesseract"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "6398eefa-e65e-4c40-bb63-84e8c017d107",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -224,
+        -112
+      ],
+      "id": "edda23cf-6c51-41ff-949f-3a689313a979",
+      "name": "Webhook",
+      "webhookId": "6398eefa-e65e-4c40-bb63-84e8c017d107"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres un auditor de inventario y recepción logística estricto e inflexible.\n\n### OBJETIVO:\nAuditar la información física de la etiqueta del paquete (Código de Barras/QR y/o texto OCR) contra la lista de pedidos pendientes en Google Sheets. Tu función es autorizar el ingreso al inventario o bloquear la recepción ante cualquier anomalía o falta de respaldo.\n\n---\n\n### REGLA INQUEBRANTABLE DE DOBLE VALIDACIÓN (ORDEN + PRODUCTO):\nEl parámetro \"coincide\" representa la AUTORIZACIÓN DE ENTRADA A STOCK.\n\nPara que \"coincide\" sea estrictamente TRUE, se deben cumplir AMBAS condiciones sin excepción:\n1. IDENTIFICADOR DE ORDEN: El número de Guía, Tracking o ID de Pedido existe en la lista de pedidos pendientes.\n2. IDENTIFICADOR DE PRODUCTO: El producto físico recibido (SKU, nombre o descripción en etiqueta/código) coincide con el producto que fue solicitado en esa orden de compra.\n\n⚠️ PROTOCOLO DE DISCREPANCIA (PRODUCTO INCORRECTO):\nSi encuentras la Orden de Compra o Guía en el sistema, pero el producto recibido físicamente es DIFERENTE al solicitado:\n- \"coincide\": false (ESTRICTAMENTE FALSE. Prohibido autorizar entrada a inventario).\n- \"estado\": \"Discrepancia / Producto Incorrecto\"\n- \"discrepancias_detectadas\": \"La orden [ID] solicita [Producto/SKU esperado], pero físicamente se recibió [Producto/SKU físico].\"\n\n---\n\n### MATRIZ DE VEREDICTOS Y ESTADOS:\n\n1. APROBADOS PARA INVENTARIO (\"coincide\": true):\n* \"Entregado Completo\": Orden coincide + Producto/SKU coincide + Cantidad recibida IGUAL a la esperada.\n* \"Entrega Parcial\": Orden coincide + Producto/SKU coincide + Cantidad recibida MENOR a la esperada.\n* \"Excedente\": Orden coincide + Producto/SKU coincide + Cantidad recibida MAYOR a la esperada.\n\n2. RECHAZADOS / ALERTAS (\"coincide\": false):\n* \"Discrepancia / Producto Incorrecto\": La orden existe en el sistema, pero el producto o SKU recibido NO coincide con lo solicitado.\n* \"Sin Coincidencia\": Ni la Guía, ni el Pedido, ni el SKU existen en la lista de pedidos pendientes (0 coincidencias).\n\n---\n\n### FORMATO DE SALIDA (ESTRICTAMENTE JSON PURO):\nResponde ÚNICAMENTE con el bloque JSON válido, sin explicaciones ni texto adicional antes o después:\n\n{\n  \"coincide\": true,\n  \"id_pedido\": \"[ID del pedido encontrado o null]\",\n  \"paqueteria\": \"[Paquetería detectada o 'No especificada']\",\n  \"guia\": \"[Número de guía o 'No especificada']\",\n  \"producto\": \"[Nombre y SKU detectado en físico]\",\n  \"cant_esperada\": 0,\n  \"cant_recibida\": 0,\n  \"estado\": \"Entregado Completo | Entrega Parcial | Excedente | Discrepancia / Producto Incorrecto | Sin Coincidencia\",\n  \"discrepancias_detectadas\": \"[Detalle explícito de qué coincidió y qué falló, o 'Ninguna']\",\n  \"mensaje_correo\": \"[Texto formal del correo de notificación]\"\n}\n\n* Reglas para `mensaje_correo`:\n- Si `estado` es \"Entregado Completo\", \"Entrega Parcial\" o \"Excedente\": Redactar el desglose formal de recepción con cantidades e ID de pedido.\n- Si `estado` es \"Discrepancia / Producto Incorrecto\": \"⚠️ ATENCIÓN: Se identificó la orden de compra pero la mercancía física recibida no corresponde a lo solicitado. Paquete retenido.\"\n- Si `estado` es \"Sin Coincidencia\": \"🚨 ALERTA: 0 COINCIDENCIAS DETECTADAS. Se recomienda rechazar el paquete por falta de orden de compra activa en el sistema.\"\n\n---\n\n### DATOS DE ENTRADA:\n\n1. Código de Barras / QR Decodificado:\n- Detectado: {{ $('Barcode Parser').item.json.detected ? 'SÍ' : 'NO' }}\n- Formato: {{ $('Barcode Parser').item.json.format || 'N/A' }}\n- Texto: \"\"\"{{ $('Barcode Parser').item.json.text || 'Sin código' }}\"\"\"\n\n2. Texto OCR (Tesseract):\n\"\"\"\n{{ $('Tesseract').item.json.text }}\n\"\"\"\n\n3. Pedidos Pendientes en Sistema (Google Sheets):\n\"\"\"\n{{ JSON.stringify($('Aggregate').item.json.data) }}\n\"\"\"",
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        896,
+        -112
+      ],
+      "id": "b1fb3ca0-a7e2-4cc0-b686-a29a81577e0b",
+      "name": "Basic LLM Chain2"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        976,
+        128
+      ],
+      "id": "a26699b5-6c1f-414f-b62f-aaaba450ce7b",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "XQNeX6YXxKoNV8kO",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1NH4qj7kF3rmYnjoFIxcra1Pz_IAtYp4ycIOdegCgkeQ",
+          "mode": "list",
+          "cachedResultName": "Control_Inventario_y_Pedidos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NH4qj7kF3rmYnjoFIxcra1Pz_IAtYp4ycIOdegCgkeQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1018695179,
+          "mode": "list",
+          "cachedResultName": "Pedidos y Entregas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NH4qj7kF3rmYnjoFIxcra1Pz_IAtYp4ycIOdegCgkeQ/edit#gid=1018695179"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRange",
+              "headerRow": 3,
+              "firstDataRow": 3
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        -112
+      ],
+      "id": "65c4c250-5d28-4393-ba35-d953d2668473",
+      "name": "Get row(s) in Almacen (hija2)1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "guUZ2AclieprW6VS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        672,
+        -112
+      ],
+      "id": "1311c227-24cd-49f9-ae77-3a7a6a3e138d",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1696,
+        -304
+      ],
+      "id": "b4860cef-2b5d-4085-aeff-c49eec1c6ff4",
+      "name": "Wait",
+      "webhookId": "133f863f-5daf-4bd2-afc4-5aa27d88bb79"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1NH4qj7kF3rmYnjoFIxcra1Pz_IAtYp4ycIOdegCgkeQ",
+          "mode": "list",
+          "cachedResultName": "Control_Inventario_y_Pedidos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NH4qj7kF3rmYnjoFIxcra1Pz_IAtYp4ycIOdegCgkeQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1018695179,
+          "mode": "list",
+          "cachedResultName": "Pedidos y Entregas",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NH4qj7kF3rmYnjoFIxcra1Pz_IAtYp4ycIOdegCgkeQ/edit#gid=1018695179"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID Pedido": "={{ JSON.parse($('Basic LLM Chain2').item.json.text.replace(/```json|```/g, '')).id_pedido }}",
+            "Cant. Recibida": "={{ JSON.parse($('Basic LLM Chain2').item.json.text.replace(/```json|```/g, '')).cant_recibida }}",
+            "Fecha Recepción": "={{ $now.setZone('America/Mexico_City').toFormat('yyyy-MM-dd') }}",
+            "Receptor / Almacén": "={{ $('Webhook').item.json.body.receptor }}",
+            "Estado de Entrega": "={{ JSON.parse($('Basic LLM Chain2').item.json.text.replace(/```json|```/g, '')).estado }}",
+            "Notas de Recepción / OCR": "={{ JSON.parse($('Basic LLM Chain2').item.json.text.replace(/```json|```/g, '')).mensaje_correo }}"
+          },
+          "matchingColumns": [
+            "ID Pedido"
+          ],
+          "schema": [
+            {
+              "id": "ID Pedido",
+              "displayName": "ID Pedido",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "No. Guía / Tracking",
+              "displayName": "No. Guía / Tracking",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Paquetería",
+              "displayName": "Paquetería",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "SKU",
+              "displayName": "SKU",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Descripción del Ítem",
+              "displayName": "Descripción del Ítem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Cant. Esperada",
+              "displayName": "Cant. Esperada",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Cant. Recibida",
+              "displayName": "Cant. Recibida",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Diferencia",
+              "displayName": "Diferencia",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Fecha Estimada",
+              "displayName": "Fecha Estimada",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Fecha Recepción",
+              "displayName": "Fecha Recepción",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Receptor / Almacén",
+              "displayName": "Receptor / Almacén",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Estado de Entrega",
+              "displayName": "Estado de Entrega",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Notas de Recepción / OCR",
+              "displayName": "Notas de Recepción / OCR",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "locationDefine": {
+            "values": {
+              "headerRow": 3
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2144,
+        -304
+      ],
+      "id": "c139b2eb-d3db-4e5d-b9ba-f335dbab7af3",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "guUZ2AclieprW6VS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d055c0cd-095d-469e-b047-3d3501060340",
+              "leftValue": "={{ $json.query.action }}",
+              "rightValue": "approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1920,
+        -304
+      ],
+      "id": "73c0b00b-0d84-4353-822e-b4c585e3db27",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "sendTo": "mail@mail.com",
+        "subject": "=🚨 ALERTA: Paquete NO Registrado (0 Coincidencias) | Recibido por {{ $('Webhook').item.json.body.receptor }}",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 620px; margin: auto; padding: 24px; border: 1px solid #fecaca; border-radius: 8px; background-color: #ffffff;\">\n  \n  <!-- Encabezado de Alerta Crítica -->\n  <div style=\"border-bottom: 2px solid #dc2626; padding-bottom: 12px; margin-bottom: 20px;\">\n    <h2 style=\"color: #991b1b; margin: 0; font-size: 20px;\">\n      🚨 ALERTA: PAQUETE NO REGISTRADO EN SISTEMA\n    </h2>\n    <p style=\"color: #b91c1c; font-size: 13px; margin: 4px 0 0 0; font-weight: bold;\">\n      Discrepancia detectada: 0 coincidencias con las órdenes de compra activas.\n    </p>\n  </div>\n\n  <!-- Resumen de Recepción -->\n  <div style=\"background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;\">\n    <p style=\"margin: 4px 0; color: #7f1d1d; font-size: 14px;\"><strong>Receptor en puerta:</strong> {{ $('Webhook').item.json.body.receptor }}</p>\n    <p style=\"margin: 4px 0; color: #7f1d1d; font-size: 14px;\"><strong>Fecha y hora:</strong> {{ $now.setZone('America/Mexico_City').toFormat('dd/MM/yyyy HH:mm') }}</p>\n  </div>\n\n  <!-- Datos extraídos por el OCR -->\n  <h3 style=\"color: #1e293b; font-size: 15px; margin-bottom: 10px;\">Información física detectada en el paquete / guía:</h3>\n  \n  <table style=\"width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;\">\n    <tr style=\"border-bottom: 1px solid #fee2e2;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold; width: 35%;\">ID Pedido:</td>\n      <td style=\"padding: 8px; color: #dc2626; font-weight: bold;\">❌ NO ENCONTRADO EN HOJA DE PEDIDOS</td>\n    </tr>\n    <tr style=\"border-bottom: 1px solid #fee2e2; background-color: #fef2f2;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold;\">Paquetería:</td>\n      <td style=\"padding: 8px; color: #0f172a;\">{{ JSON.parse($json.text.replace(/```json|```/g, '')).paqueteria }}</td>\n    </tr>\n    <tr style=\"border-bottom: 1px solid #fee2e2;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold;\">No. Guía / Rótulo:</td>\n      <td style=\"padding: 8px; color: #0f172a; font-family: monospace; font-size: 13px;\">{{ JSON.parse($json.text.replace(/```json|```/g, '')).guia }}</td>\n    </tr>\n    <tr style=\"border-bottom: 1px solid #fee2e2; background-color: #fef2f2;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold;\">Contenido físico:</td>\n      <td style=\"padding: 8px; color: #0f172a;\">{{ JSON.parse($json.text.replace(/```json|```/g, '')).producto }}</td>\n    </tr>\n    <tr style=\"border-bottom: 1px solid #fee2e2;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold;\">Cantidad física:</td>\n      <td style=\"padding: 8px; color: #0f172a;\"><strong>{{ JSON.parse($json.text.replace(/```json|```/g, '')).cant_recibida }}</strong> piezas / bultos</td>\n    </tr>\n    <tr style=\"background-color: #fef2f2;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold;\">Dictamen del sistema:</td>\n      <td style=\"padding: 8px; color: #b91c1c; font-weight: bold;\">{{ JSON.parse($json.text.replace(/```json|```/g, '')).estado }}</td>\n    </tr>\n  </table>\n\n  <!-- Explicación del Auditor / IA -->\n  <div style=\"background-color: #ffffff; border: 1px solid #fca5a5; padding: 14px 16px; border-radius: 6px; color: #334155; line-height: 1.5; font-size: 13px; margin-bottom: 20px;\">\n    <strong style=\"color: #991b1b;\">Evaluación del sistema:</strong><br>\n    {{ JSON.parse($json.text.replace(/```json|```/g, '')).mensaje_correo }}\n  </div>\n\n  <!-- Protocolo de Acción Recomendado -->\n  <div style=\"background-color: #fffbeb; border-left: 4px solid #d97706; padding: 14px 16px; border-radius: 4px; margin-bottom: 24px;\">\n    <p style=\"margin: 0 0 8px 0; color: #92400e; font-size: 13px; font-weight: bold;\">\n      📋 PROTOCOLO DE ACTUACIÓN EN ALMACÉN:\n    </p>\n    <ul style=\"margin: 0; padding-left: 20px; color: #78350f; font-size: 13px; line-height: 1.5;\">\n      <li><strong>Si el transportista sigue presente:</strong> No firmar de recibido y solicitar orden de remisión o devolver al remitente si la dirección no corresponde.</li>\n      <li><strong>Si el paquete ya fue descargado:</strong> Trasladar a la <strong>Zona de Cuarentena / Retención</strong> debidamente rotulado.</li>\n      <li><strong>Validación con Compras:</strong> Verificar si corresponde a una compra urgente extraordinaria que no fue cargada a la hoja de pedidos.</li>\n    </ul>\n  </div>\n\n  <p style=\"text-align: center; font-size: 12px; color: #64748b; margin-top: 10px;\">\n    ℹ️ <em>Este paquete <strong>NO</strong> ha sido registrado en la base de datos de Google Sheets.</em>\n  </p>\n\n  <hr style=\"border: none; border-top: 1px solid #e2e8f0; margin: 24px 0 12px 0;\" />\n  <p style=\"font-size: 11px; color: #94a3b8; text-align: center; margin: 0;\">\n    Sistema automatizado de control de almacén e inventario.\n  </p>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        80
+      ],
+      "id": "fae51d08-3117-429a-9c2d-46e265dea84c",
+      "name": "Send a message",
+      "webhookId": "41ce3e15-4f45-465a-8254-eb80cdb7b1da",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LKNCQpJd8BVfcgIo",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1NH4qj7kF3rmYnjoFIxcra1Pz_IAtYp4ycIOdegCgkeQ",
+          "mode": "list",
+          "cachedResultName": "Control_Inventario_y_Pedidos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NH4qj7kF3rmYnjoFIxcra1Pz_IAtYp4ycIOdegCgkeQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1479724750,
+          "mode": "list",
+          "cachedResultName": "Catálogo de Productos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NH4qj7kF3rmYnjoFIxcra1Pz_IAtYp4ycIOdegCgkeQ/edit#gid=1479724750"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "=SKU",
+              "lookupValue": "={{ $('Get row(s) in Almacen (hija2)1').all().find(r => r.json['ID Pedido'] === JSON.parse($('Basic LLM Chain2').item.json.text.replace(/```json|```/g, '')).id_pedido)?.json['SKU'] || JSON.parse($('Basic LLM Chain2').item.json.text.replace(/```json|```/g, '')).producto.match(/SKU-\\d+/)?.[0] }}"
+            }
+          ]
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRange",
+              "headerRow": 3,
+              "firstDataRow": 4
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2368,
+        -304
+      ],
+      "id": "aa4ff7d8-9086-4c8b-b933-ac01b19543c2",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "guUZ2AclieprW6VS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1NH4qj7kF3rmYnjoFIxcra1Pz_IAtYp4ycIOdegCgkeQ",
+          "mode": "list",
+          "cachedResultName": "Control_Inventario_y_Pedidos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NH4qj7kF3rmYnjoFIxcra1Pz_IAtYp4ycIOdegCgkeQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1479724750,
+          "mode": "list",
+          "cachedResultName": "Catálogo de Productos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1NH4qj7kF3rmYnjoFIxcra1Pz_IAtYp4ycIOdegCgkeQ/edit#gid=1479724750"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": 0,
+            "SKU": "={{ $json.SKU }}",
+            "Stock Actual": "={{ Number($json['Stock Actual']) + Number(JSON.parse($('Basic LLM Chain2').item.json.text.replace(/```json|```/g, '')).cant_recibida) }}"
+          },
+          "matchingColumns": [
+            "SKU"
+          ],
+          "schema": [
+            {
+              "id": "SKU",
+              "displayName": "SKU",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Descripción del Producto",
+              "displayName": "Descripción del Producto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Categoría",
+              "displayName": "Categoría",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Unidad",
+              "displayName": "Unidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Proveedor Principal",
+              "displayName": "Proveedor Principal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Stock Actual",
+              "displayName": "Stock Actual",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Stock Mínimo",
+              "displayName": "Stock Mínimo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Costo Unitario (MXN)",
+              "displayName": "Costo Unitario (MXN)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Valor Total Stock",
+              "displayName": "Valor Total Stock",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Estado de Stock",
+              "displayName": "Estado de Stock",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "locationDefine": {
+            "values": {
+              "headerRow": 3,
+              "firstDataRow": 4
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2592,
+        -304
+      ],
+      "id": "618388f1-201e-4a6b-9993-46d12bd1fdf1",
+      "name": "Update row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "guUZ2AclieprW6VS",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Flujo de automatico \nPara llegada de paquete - verificador de compatbilidad",
+        "height": 96,
+        "width": 448,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        848,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "1e7649fb-b63c-4167-b841-89df706561d7",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "foto",
+        "options": {}
+      },
+      "type": "CUSTOM.barcodeParser",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -16
+      ],
+      "id": "fc4329df-04bd-45bf-b137-9fe881d0d0fe",
+      "name": "Barcode Parser"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        224,
+        -112
+      ],
+      "id": "0160db3d-b9d6-4901-a2ad-fb6d7bc43cb3",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ JSON.parse($json.text.replace('```json', '').replace('```', '').trim()).coincide }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "74083b19-ceeb-45f4-bb9f-10d6354023f7"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "eb172eb0-0841-4cfc-8bef-5a936e7004d3",
+                    "leftValue": "={{ JSON.parse($json.text.replace('```json', '').replace('```', '').trim()).estado }}",
+                    "rightValue": "Discrepancia",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5754780b-be5e-411e-85c4-193a249008d7",
+                    "leftValue": "={{ JSON.parse($json.text.replace('```json', '').replace('```', '').trim()).estado }}",
+                    "rightValue": "Sin Coincidencia",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1248,
+        -128
+      ],
+      "id": "d39ea3af-3414-458d-b019-2923e38da03f",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "sendTo": "mail@mail.com",
+        "subject": "=⚠️ [DISCREPANCIA EN RECEPCIÓN] Orden {{ JSON.parse($json.text.replace(/```json|```/g, '')).id_pedido }} - Mercancía física no corresponde a lo solicitado",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 640px; margin: auto; padding: 24px; border: 1px solid #fed7aa; border-radius: 8px; background-color: #ffffff;\">\n  \n  <!-- Encabezado de Discrepancia Crítica -->\n  <div style=\"border-bottom: 2px solid #ea580c; padding-bottom: 12px; margin-bottom: 20px;\">\n    <h2 style=\"color: #9a3412; margin: 0; font-size: 20px;\">\n      ⚠️ ALERTA: DISCREPANCIA EN PRODUCTO / ORDEN\n    </h2>\n    <p style=\"color: #c2410c; font-size: 13px; margin: 4px 0 0 0; font-weight: bold;\">\n      Orden de compra identificada en sistema, pero el material recibido físicamente presenta inconsistencias.\n    </p>\n  </div>\n\n  <!-- Resumen de Recepción -->\n  <div style=\"background-color: #fff7ed; border-left: 4px solid #ea580c; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;\">\n    <p style=\"margin: 4px 0; color: #7c2d12; font-size: 14px;\"><strong>ID Orden Afectada:</strong> <span style=\"font-family: monospace; font-size: 15px; font-weight: bold;\">{{ JSON.parse($json.text.replace(/```json|```/g, '')).id_pedido }}</span></p>\n    <p style=\"margin: 4px 0; color: #7c2d12; font-size: 14px;\"><strong>Receptor en puerta:</strong> {{ $('Webhook').item.json.body.receptor }}</p>\n    <p style=\"margin: 4px 0; color: #7c2d12; font-size: 14px;\"><strong>Fecha y hora:</strong> {{ $now.setZone('America/Mexico_City').toFormat('dd/MM/yyyy HH:mm') }}</p>\n  </div>\n\n  <!-- Tabla Comparativa -->\n  <h3 style=\"color: #1e293b; font-size: 15px; margin-bottom: 10px;\">Detalle de auditoría y comparación:</h3>\n  \n  <table style=\"width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;\">\n    <tr style=\"border-bottom: 1px solid #ffedd5;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold; width: 38%;\">No. Guía / Tracking:</td>\n      <td style=\"padding: 8px; color: #0f172a; font-family: monospace; font-size: 13px;\">{{ JSON.parse($json.text.replace(/```json|```/g, '')).guia }}</td>\n    </tr>\n    <tr style=\"border-bottom: 1px solid #ffedd5; background-color: #fff7ed;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold;\">Paquetería:</td>\n      <td style=\"padding: 8px; color: #0f172a;\">{{ JSON.parse($json.text.replace(/```json|```/g, '')).paqueteria }}</td>\n    </tr>\n    <tr style=\"border-bottom: 1px solid #ffedd5;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold;\">Producto detectado en físico:</td>\n      <td style=\"padding: 8px; color: #c2410c; font-weight: bold;\">{{ JSON.parse($json.text.replace(/```json|```/g, '')).producto }}</td>\n    </tr>\n    <tr style=\"border-bottom: 1px solid #ffedd5; background-color: #fff7ed;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold;\">Cantidad física / esperada:</td>\n      <td style=\"padding: 8px; color: #0f172a;\">\n        <strong>{{ JSON.parse($json.text.replace(/```json|```/g, '')).cant_recibida }}</strong> recibidas / {{ JSON.parse($json.text.replace(/```json|```/g, '')).cant_esperada }} solicitadas\n      </td>\n    </tr>\n    <tr style=\"border-bottom: 1px solid #ffedd5;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold;\">Discrepancia detectada:</td>\n      <td style=\"padding: 8px; color: #b91c1c; font-weight: bold;\">{{ JSON.parse($json.text.replace(/```json|```/g, '')).discrepancias_detectadas || 'SKU o descripción no coincide con la orden de compra.' }}</td>\n    </tr>\n    <tr style=\"background-color: #fff7ed;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold;\">Dictamen del sistema:</td>\n      <td style=\"padding: 8px; color: #9a3412; font-weight: bold;\">{{ JSON.parse($json.text.replace(/```json|```/g, '')).estado }}</td>\n    </tr>\n  </table>\n\n  <!-- Evaluación del Auditor / IA -->\n  <div style=\"background-color: #ffffff; border: 1px solid #fdba74; padding: 14px 16px; border-radius: 6px; color: #334155; line-height: 1.5; font-size: 13px; margin-bottom: 20px;\">\n    <strong style=\"color: #9a3412;\">Dictamen de recepción:</strong><br>\n    {{ JSON.parse($json.text.replace(/```json|```/g, '')).mensaje_correo }}\n  </div>\n\n  <!-- Protocolo de Acción -->\n  <div style=\"background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 14px 16px; border-radius: 4px; margin-bottom: 24px;\">\n    <p style=\"margin: 0 0 8px 0; color: #991b1b; font-size: 13px; font-weight: bold;\">\n      📋 ACCIONES INMEDIATAS REQUERIDAS:\n    </p>\n    <ul style=\"margin: 0; padding-left: 20px; color: #7f1d1d; font-size: 13px; line-height: 1.5;\">\n      <li><strong>Aislar el paquete:</strong> Mover a la <strong>Zona de Retención / Discrepancias</strong> con una etiqueta de color rojo/naranja.</li>\n      <li><strong>No ingresar al stock general:</strong> Evitar mezclar con inventario disponible hasta la aclaración de Compras.</li>\n      <li><strong>Reclamación a Proveedor:</strong> El departamento de compras debe contactar al proveedor con la evidencia fotográfica para solicitar sustitución o nota de crédito.</li>\n    </ul>\n  </div>\n\n  <p style=\"text-align: center; font-size: 12px; color: #64748b; margin-top: 10px;\">\n    🔒 <em>El inventario en <strong>Catálogo de Productos</strong> NO ha sido modificado para prevenir inconsistencias de stock.</em>\n  </p>\n\n  <hr style=\"border: none; border-top: 1px solid #e2e8f0; margin: 24px 0 12px 0;\" />\n  <p style=\"font-size: 11px; color: #94a3b8; text-align: center; margin: 0;\">\n    Sistema automatizado de control de almacén e inventario.\n  </p>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        -112
+      ],
+      "id": "91d631e1-c87c-4023-9b68-2c660c477933",
+      "name": "discrepancia",
+      "webhookId": "41ce3e15-4f45-465a-8254-eb80cdb7b1da",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LKNCQpJd8BVfcgIo",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "mail@mail.com",
+        "subject": "=🔔 Auditoría de Paquete | Recibido por {{ $('Webhook').item.json.body.receptor }}  [Requiere Aprobación] ",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 620px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff;\">\n  \n  <h2 style=\"color: #1e293b; margin-top: 0; padding-bottom: 10px; border-bottom: 2px solid #2563eb; font-size: 20px;\">\n    📦 Notificación de Recepción y Conciliación\n  </h2>\n\n  <!-- Resumen del Receptor -->\n  <div style=\"background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 12px 16px; margin-bottom: 20px; border-radius: 4px;\">\n    <p style=\"margin: 4px 0; color: #1e293b; font-size: 14px;\"><strong>Receptor:</strong> {{ $('Webhook').item.json.body.receptor }}</p>\n    <p style=\"margin: 4px 0; color: #1e293b; font-size: 14px;\"><strong>Fecha y hora:</strong> {{ $now.setZone('America/Mexico_City').toFormat('dd/MM/yyyy HH:mm') }}</p>\n  </div>\n\n  <!-- Ficha de Datos Conciliados -->\n  <h3 style=\"color: #1e293b; font-size: 15px; margin-bottom: 10px;\">Detalles de la Conciliación:</h3>\n  \n  <table style=\"width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;\">\n    <tr style=\"border-bottom: 1px solid #e2e8f0;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold; width: 35%;\">ID Pedido:</td>\n      <td style=\"padding: 8px; color: #0f172a; font-weight: bold;\">{{ JSON.parse($json.text.replace(/```json|```/g, '')).id_pedido }}</td>\n    </tr>\n    <tr style=\"border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold;\">Paquetería:</td>\n      <td style=\"padding: 8px; color: #0f172a;\">{{ JSON.parse($json.text.replace(/```json|```/g, '')).paqueteria }}</td>\n    </tr>\n    <tr style=\"border-bottom: 1px solid #e2e8f0;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold;\">No. Guía:</td>\n      <td style=\"padding: 8px; color: #0f172a;\">{{ JSON.parse($json.text.replace(/```json|```/g, '')).guia }}</td>\n    </tr>\n    <tr style=\"border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold;\">Producto:</td>\n      <td style=\"padding: 8px; color: #0f172a;\">{{ JSON.parse($json.text.replace(/```json|```/g, '')).producto }}</td>\n    </tr>\n    <tr style=\"border-bottom: 1px solid #e2e8f0;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold;\">Cantidades:</td>\n      <td style=\"padding: 8px; color: #0f172a;\">\n        Esperadas: <strong>{{ JSON.parse($json.text.replace(/```json|```/g, '')).cant_esperada }}</strong> | \n        Recibidas: <strong>{{ JSON.parse($json.text.replace(/```json|```/g, '')).cant_recibida }}</strong>\n      </td>\n    </tr>\n    <tr style=\"background-color: #f8fafc;\">\n      <td style=\"padding: 8px; color: #64748b; font-weight: bold;\">Estado:</td>\n      <td style=\"padding: 8px; color: #2563eb; font-weight: bold;\">{{ JSON.parse($json.text.replace(/```json|```/g, '')).estado }}</td>\n    </tr>\n  </table>\n\n  <!-- Mensaje de Auditoría -->\n  <div style=\"background-color: #ffffff; border: 1px solid #cbd5e1; padding: 14px 16px; border-radius: 6px; color: #334155; line-height: 1.5; font-size: 13px; margin-bottom: 20px;\">\n    <strong>Notas del auditor:</strong><br>\n    {{ JSON.parse($json.text.replace(/```json|```/g, '')).mensaje_correo }}\n  </div>\n\n  <!-- Advertencia -->\n  <div style=\"background-color: #fffbeb; border-left: 4px solid #d97706; padding: 10px 14px; border-radius: 4px; margin-bottom: 24px;\">\n    <p style=\"margin: 0; color: #92400e; font-size: 12px; font-weight: bold;\">\n      ⚠️ ADVERTENCIA: Verifique físicamente el material antes de autorizar. Si hay discrepancias complejas, elija la opción manual.\n    </p>\n  </div>\n\n  <!-- Botones de Acción -->\n  <div style=\"text-align: center; margin: 28px 0 16px 0;\">\n    <!-- Botón 1: Confirmar Automático -->\n    <a href=\"{{ $execution.resumeUrl }}&action=approve\" \n       target=\"_blank\" \n       style=\"background-color: #16a34a; color: #ffffff; padding: 12px 22px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; display: inline-block; margin: 6px 8px;\">\n      ✅ Confirmar y Actualizar\n    </a>\n\n    <!-- Botón 2: Modificación Manual / Descartar -->\n    <a href=\"{{ $execution.resumeUrl }}&action=manual\" \n       target=\"_blank\" \n       style=\"background-color: #475569; color: #ffffff; padding: 12px 22px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; display: inline-block; margin: 6px 8px;\">\n      ✏️ Modificación Manual\n    </a>\n  </div>\n\n  <p style=\"font-size: 11px; color: #94a3b8; text-align: center; margin-top: 16px;\">\n    Sistema automatizado de control de almacén e inventario.\n  </p>\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        -304
+      ],
+      "id": "80f91462-4103-4580-b962-1dffecf45e25",
+      "name": "Send a message2",
+      "webhookId": "41ce3e15-4f45-465a-8254-eb80cdb7b1da",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "LKNCQpJd8BVfcgIo",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Tesseract",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Barcode Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tesseract": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain2": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in Almacen (hija2)1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Barcode Parser": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in Almacen (hija2)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "discrepancia",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message2": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "26f9a565-ca79-4244-b3f3-ada85d93c5c3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cd3c3bdbe27c9643b5dbe72d117b8b966c4f745733a43dd8bc244acca9b651a7"
+  },
+  "nodeGroups": [],
+  "id": "20Mi7WfBSiFJeHaj",
+  "tags": []
+}
